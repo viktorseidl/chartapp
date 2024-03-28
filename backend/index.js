@@ -1,66 +1,57 @@
 const express = require('express');
-const http=require('http');
+const http=require('http'); 
+const {v4:uuidV4}=require('uuid');
 const app = express();
-const server = http.createServer(app);
-const socket = require('socket.io');  
+const ExpressPeerServer = require('peer').ExpressPeerServer;
+const server = http.createServer(app); 
 const io = require("socket.io")(server, {
 	cors: {
 		origin: "*",
-		methods: [ "GET", "POST" ]
+		//methods: [ "GET", "POST" ]
 	}
+}); 
+const connections={}
+const rooms={
+  Rooms:{},
+  Start:{}
+}
+const peerserver=ExpressPeerServer(server, {
+  debug: true
+})
+app.use('/peerjs', peerserver); 
+ 
+peerserver.on('connection', (client) => { 
+  connections[client.id]=client.id
+  rooms.Start[client.id]=client.id
+  console.log('messageconnected ',client.id)
+  //console.log(rooms)
 });
-let clients=[]
-io.on('connection', (socket) => {
-  console.log(socket.id);
-  let iscon=false
-  for(let i=0;i<clients.length;i++){
-    clients[i]==socket.id?iscon=true:''
-  }
-  if(iscon!=true){
-    clients.push(socket.id);
-  }
-  console.log(clients)
-  socket.on('disconnect', () => {
-    console.log('User disconnected');
-    let arr=[]
-    for(let i=0;i<clients.length;i++){
-      clients[i]!=socket.id?arr.push(clients[i]):''
-    }
-    clients=arr
-    console.log(clients)
+peerserver.on('disconnect', (client) => { 
+  delete connections[client.id] 
+  delete rooms.Start[client.id]
+  console.log('messagedisconnected ',client.id)
+});  
+app.get('/',(req,res)=>{
+  //console.log(req)
+  res.redirect(`/${uuidV4}`)
+})
+app.get('/:roomID',(req,res)=>{
+  //console.log(req)
+})
+io.on('connection',socket =>{  
+  //console.log(socket)
+   console.log('socket connected ',socket.id)
+   socket.on('joinRoom', (room,peer) => {
+    console.log('socket joinedRoom '+room+' peerid: '+peer);
+    socket.join(room)
   });
+   socket.on('disconnect', () => {
+    console.log('socket disconnected');
+  });
+})
 
-  socket.on('message', (data) => {
-    console.log('Message received:', data);
-    io.emit('message', data); // Broadcast message to all clients
-  });
-  // Handle offer message from client
-  socket.on('offer', (offer) => {
-    console.log('offer:', offer);
-    for(let i=0;i<clients.length;i++){
-      clients[i]!=socket.id?socket.broadcast.emit('offer', offer):''
-    }
-    // Broadcast the offer to all other clients 
-  });
-  // Handle answer message from client
-  socket.on('answer', (answer) => {
-    console.log('answer:', answer);
-    // Broadcast the answer to all other clients
-    for(let i=0;i<clients.length;i++){
-      clients[i]!=socket.id?socket.broadcast.emit('answer', answer):''
-    } 
-  });
-  // Handle ICE candidate message from client
-  socket.on('candidate', (candidate) => {
-    console.log('candidate:', candidate);
-    // Broadcast the ICE candidate to all other clients
-    for(let i=0;i<clients.length;i++){
-      clients[i]!=socket.id?socket.broadcast.emit('candidate', candidate):''
-    }
-  });
-});
 
 const port = process.env.PORT || 4000;
-server.listen(port, () => {
+server.listen(port, 'localhost',() => {
   console.log(`Server is running on port ${port}`);
 });
