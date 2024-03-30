@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react'
 import io from 'socket.io-client' 
+import { stringToUuid } from '../../../utils/functions/functionhooks'
 const StartView = (props) => {
 useEffect(()=>{
+/*
   const socket =io('http://localhost:4000')  
   socket.connect(true)
     const peer = new Peer({
@@ -38,7 +40,7 @@ useEffect(()=>{
         console.log(id)
         
         socket.emit('join-application',id,10)
-    })
+    })*/
 },[])
     return (
     <section className={props.CSS?'w-full h-full col-span-9':'w-full h-full col-span-12'}>
